@@ -55,6 +55,7 @@ class ThemeManager(object):
         'LABELBOLD'   : 'WHITE_BLACK',
         'CONTROL'     : 'YELLOW_BLACK',
         'IMPORTANT'   : 'GREEN_BLACK',
+        'MODIFIED'   : 'GREEN_BLACK',
         'SAFE'        : 'GREEN_BLACK',
         'WARNING'     : 'YELLOW_BLACK',
         'DANGER'      : 'RED_BLACK',

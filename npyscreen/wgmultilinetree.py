@@ -2,13 +2,15 @@
 import curses
 import weakref
 
+from . import wgmultilineeditable as MLEditable
 from . import wgmultiline    as multiline
 from . import wgtextbox      as textbox
 from npyscreen.compatibility_code import npysNPSTree as NPSTree
 from .npysTree import TreeData
 
 
-class TreeLine(textbox.TextfieldBase):
+#class TreeLine(textbox.TextfieldBase):
+class TreeLine(textbox.Textfield):
     def __init__(self, *args, **keywords):
         self._tree_real_value   = None
         self._tree_ignore_root  = None
@@ -35,8 +37,6 @@ class TreeLine(textbox.TextfieldBase):
 
     # End Compatibility Methods
     ##########################################################################
-
-
 
 
 
@@ -130,37 +130,63 @@ class TreeLine(textbox.TextfieldBase):
             # Catch the times this is None.
             return self.safe_string(vl)
             
-    
+    def set_color(self, color='DEFAULT'):
+        self.color=color
+
+    @property
+    def text_value(self):
+        return self.display_value(None)
+
+    @text_value.setter
+    def text_value(self, value):
+        self._tree_real_value.set_content(value)
+        self.value = value
 
 class TreeLineAnnotated(TreeLine):
-    ## Experimental.
-    _annotate = "   ?   "
-    _annotatecolor = 'CONTROL'
+    def __init__(self, *args, **kwargs):
+        self._annotation = '?'
+        self._annotation_color = 'LABEL'
+        self._annotation_padding = 0
+        self.show_v_lines = False
+        super().__init__(*args, **kwargs)
 
-    def getAnnotationAndColor(self):
-        # This is actually the api.  Override this function to return the correct string and colour name as a tuple.
-        self.setAnnotateString()
-        return (self._annotate, self._annotatecolor)
+    @property
+    def annotation(self):
+        return self._annotation
 
-    def setAnnotateString(self):
-        # This was an experimental function it was the original way to set the string and annotation.
-        self._annotate = "   ?   "
-        self._annotatecolor = 'CONTROL'
+    @annotation.setter
+    def annotation(self, annotation):
+        if annotation: self._annotation = annotation
+
+    @property
+    def annotation_color(self):
+        return self._annotation_color
+
+    @annotation_color.setter
+    def annotation_color(self, color='DEFAULT'):
+        self._annotation_color = color
+
+    @property
+    def annotation_padding(self):
+        return self._annotation_padding
+
+    @annotation_padding.setter
+    def annotation_padding(self, padding):
+        self._annotation_padding = padding
 
     def annotationColor(self, real_x):
         # Must return the "Margin" needed before the entry begins
-         # historical reasons.
-        _annotation, _color = self.getAnnotationAndColor()
-        self.parent.curses_pad.addstr(self.rely, real_x, _annotation, self.parent.theme_manager.findPair(self, _color))
-        return len(_annotation)
+        # historical reasons.
+        self.parent.curses_pad.addstr(self.rely, real_x, self.annotation, \
+            self.parent.theme_manager.findPair(self, self.annotation_color))
+        return max(self.annotation_padding,len(self.annotation))
 
     def annotationNoColor(self, real_x):
         # Must return the "Margin" needed before the entry begins
         #self.parent.curses_pad.addstr(self.rely, real_x, 'xxx')
         #return 3
-        _annotation, _color = self.getAnnotationAndColor()
-        self.parent.curses_pad.addstr(self.rely, real_x, _annotation)
-        return len(_annotation)
+        self.parent.curses_pad.addstr(self.rely, real_x, self.annotation)
+        return len(self.annotation)
 
     def _print(self):
         self.left_margin = 0
@@ -288,11 +314,11 @@ class MLTree(multiline.MultiLine):
                 ord(']'): self.h_expand_tree,
                 ord('{'): self.h_collapse_all,
                 ord('}'): self.h_expand_all,
-                ord('h'): self.h_collapse_tree,
-                ord('l'): self.h_expand_tree,                
+                ord('+'): self.h_expand_tree,
+                ord('-'): self.h_collapse_tree,
+                curses.ascii.SP: self.h_toggle_tree
         })
 
-    
     def _before_print_lines(self):
         pass
     
@@ -375,8 +401,33 @@ class MLTree(multiline.MultiLine):
         self.cursor_line  = 0
         self.display()
     
+    def h_toggle_tree(self, ch):
+        if self.values[self.cursor_line].expanded:
+            self.h_collapse_tree(ch)
+        else:
+            self.h_expand_tree(ch)
+
 class MLTreeAnnotated(MLTree):
     _contained_widgets = TreeLineAnnotated
+
+    @property
+    def annotation_padding(self):
+        return self._annotation_padding or 0
+
+    @annotation_padding.setter
+    def annotation_padding(self, padding):
+        if isinstance(padding, int) and padding >= 0: self._annotation_padding = padding
+
+    def _set_line_values(self, line, value_indexer):
+        try:
+            tree_data = self.values[value_indexer]
+            line.annotation = tree_data.annotation
+            line.annotation_padding = self.annotation_padding
+            line.annotation_color = 'LABEL'
+        except:
+            pass
+
+        super()._set_line_values(line, value_indexer)
 
 class MLTreeAction(MLTree, multiline.MultiLineAction):
     pass
@@ -385,14 +436,78 @@ class MLTreeAnnotatedAction(MLTree, multiline.MultiLineAction):
     _contained_widgets = TreeLineAnnotated
 
 
+class MLTreeEditable(MLTree, MLEditable.MultiLineEditable):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.CONTINUE_EDITING_AFTER_EDITING_ONE_LINE = False
 
+    def check_line(self, line):
+        return False if not line.text_value else True
 
+    def _set_line_values(self, line, value_indexer):
+        line.modified = False
+        try:
+            tree_data = self.values[value_indexer]
+            line.set_editable(tree_data.editable)
+            line.modified = tree_data.modified
+            line.set_color('DEFAULT' if tree_data.editable else 'NO_EDIT')
+        except:
+            pass
 
+        super()._set_line_values(line, value_indexer)
 
+    def edit_cursor_line_value(self):
+        check_status = True
 
+        try:
+            active_line = self._my_widgets[(self.cursor_line-self.start_display_at)]
+        except IndexError:
+            return False
 
+        if not active_line.get_editable(): return False
 
+        original_text_value = active_line.text_value
+        active_line.highlight = False
+        previously_modified = active_line.modified
+        active_line.edit()
 
+        active_line._tree_real_value.modified = active_line.modified
 
+        self.reset_display_cache()
+        
+        if self.CHECK_VALUE:
+            if not self.check_line(active_line):
+                # reset value for now.  may want to add other options, e.g. delete node
+                active_line.text_value = original_text_value
+                active_line.modified = previously_modified
+                check_status = False
 
+        # add modification status to tree data, and add indicator to form title
+        active_line._tree_real_value.modified = active_line.modified
+        if active_line.modified and not self.parent.name.endswith("*"): 
+            self.parent.name += " *"
+            self.parent.draw_title_and_help()
 
+        return check_status
+
+    def set_up_handlers(self):
+        super().set_up_handlers()
+        self.handlers.update ( {
+            ord('e'):        self.h_edit_cursor_line_value,
+            ord('r'):        self.h_edit_cursor_line_value,
+            curses.ascii.CR: self.h_edit_cursor_line_value,
+            curses.ascii.NL: self.h_edit_cursor_line_value,
+
+            # unregister unwanted bindings from super class(es)
+            # TODO: skip these registrations altogether with proper super() use
+            ord('i'):             self.noop,
+            ord('o'):             self.noop,
+            curses.ascii.DEL:     self.noop,
+            curses.ascii.BS:      self.noop,
+            curses.KEY_BACKSPACE: self.noop
+        })
+
+    noop = lambda *a, **k: None
+
+class MLTreeAnnotatedEditable(MLTreeEditable, MLTreeAnnotated):
+    pass

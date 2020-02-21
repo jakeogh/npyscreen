@@ -4,10 +4,13 @@ import collections
 class TreeData(object):
     # This is a new version of NPSTreeData that follows PEP8.
     CHILDCLASS = None
-    def __init__(self, content=None, parent=None, selected=False, selectable=True,
-                    highlight=False, expanded=True, ignore_root=True, sort_function=None):
+    def __init__(self, content=None, annotation=None, parent=None, selected=False,
+                 selectable=False, editable=False, highlight=False, 
+                 expanded=True, ignore_root=True, sort_function=None):
         self.set_parent(parent)
         self.set_content(content)
+        self.annotation = annotation
+        self.editable = editable
         self.selectable = selectable
         self.selected   = selected
         self.highlight  = highlight
@@ -17,7 +20,31 @@ class TreeData(object):
         self.sort       = False
         self.sort_function = sort_function
         self.sort_function_wrapper = True
+        self.modified = False
 
+    @property
+    def modified(self):
+        return self._modified
+
+    @modified.setter
+    def modified(self, modified):
+        self._modified = modified
+
+    @property
+    def editable(self):
+        return self._editable
+
+    @editable.setter
+    def editable(self, editable):
+        self._editable = editable
+
+    @property
+    def annotation(self):
+        return self._annotation
+
+    @annotation.setter
+    def annotation(self, annotation):
+        self._annotation = annotation
 
     def get_content(self):
         return self.content
