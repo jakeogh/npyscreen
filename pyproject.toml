@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "npyscreen"
+version = "4.9.1"
+description = "Writing user interfaces without all that ugly mucking about in hyperspace"
+authors = [
+    "Nicholas Cole <n@npcole.com>",
+    "rdugan <1779672+rdugan@users.noreply.github.com>"
+]
+license = "BSD-3-Clause"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"
+flake8 = "^3.7.9"
+pyls-black = "^0.4.4"
+rope = "^0.16.0"
+pydocstyle = "^5.0.2"
+python-language-server = "^0.31.7"
+
+[build-system]
+requires = ["poetry>=1.0.3"]
+build-backend = "poetry.masonry.api"
