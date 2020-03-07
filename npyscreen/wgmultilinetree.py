@@ -59,81 +59,45 @@ class TreeLine(textbox.Textfield):
             dp = self._tree_depth
             if self._tree_ignore_root:
                 dp -= 1
+            if dp:  # > 0:
+                if dp < this_safe_depth_display:
+                    real_x = self._indent_tree(dp, _tree_depth_next, real_x)
 
-            if dp and dp < this_safe_depth_display:
-                for i in range(dp - 1):
-                    if (i < _tree_depth_next) and (
-                        not self._tree_last_line
-                    ):  # was i+1 < # and not (_tree_depth_next==1):
-                        if self.show_v_lines:
-                            self.parent.curses_pad.addch(
-                                self.rely, real_x, curses.ACS_VLINE, curses.A_NORMAL
-                            )
-                            if self.height > 1:
-                                for h in range(self.height - 1):
-                                    self.parent.curses_pad.addch(
-                                        self.rely + h + 1,
-                                        real_x,
-                                        curses.ACS_VLINE,
-                                        curses.A_NORMAL,
-                                    )
-                        else:
-                            self.parent.curses_pad.addch(
-                                self.rely, real_x, " ", curses.A_NORMAL
-                            )
+                    if self._tree_sibling_next or _tree_depth_next > self._tree_depth:
+                        self.parent.curses_pad.addch(
+                            self.rely, real_x, curses.ACS_LTEE, curses.A_NORMAL
+                        )
+                        if self.height > 1:
+                            for h in range(self.height - 1):
+                                self.parent.curses_pad.addch(
+                                    self.rely + h + 1,
+                                    real_x,
+                                    curses.ACS_VLINE,
+                                    curses.A_NORMAL,
+                                )
 
                     else:
-                        if self.show_v_lines:
-                            self.parent.curses_pad.addch(
-                                self.rely, real_x, curses.ACS_BTEE, curses.A_NORMAL
-                            )
-
-                        else:
-                            self.parent.curses_pad.addch(
-                                self.rely, real_x, " ", curses.A_NORMAL
-                            )
-
+                        self.parent.curses_pad.addch(
+                            self.rely, real_x, curses.ACS_LLCORNER, curses.A_NORMAL
+                        )
                     real_x += 1
                     self.parent.curses_pad.addch(
-                        self.rely, real_x, ord(" "), curses.A_NORMAL
+                        self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL
                     )
                     real_x += 1
-
-                if self._tree_sibling_next or _tree_depth_next > self._tree_depth:
-                    self.parent.curses_pad.addch(
-                        self.rely, real_x, curses.ACS_LTEE, curses.A_NORMAL
-                    )
-                    if self.height > 1:
-                        for h in range(self.height - 1):
-                            self.parent.curses_pad.addch(
-                                self.rely + h + 1,
-                                real_x,
-                                curses.ACS_VLINE,
-                                curses.A_NORMAL,
-                            )
-
                 else:
                     self.parent.curses_pad.addch(
-                        self.rely, real_x, curses.ACS_LLCORNER, curses.A_NORMAL
+                        self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL
                     )
-                real_x += 1
-                self.parent.curses_pad.addch(
-                    self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL
-                )
-                real_x += 1
-            else:
-                self.parent.curses_pad.addch(
-                    self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL
-                )
-                real_x += 1
-                self.parent.curses_pad.addstr(
-                    self.rely, real_x, "[ %s ]" % (str(dp)), curses.A_NORMAL
-                )
-                real_x += len(str(dp)) + 4
-                self.parent.curses_pad.addch(
-                    self.rely, real_x, curses.ACS_RTEE, curses.A_NORMAL
-                )
-                real_x += 1
+                    real_x += 1
+                    self.parent.curses_pad.addstr(
+                        self.rely, real_x, "[ %s ]" % (str(dp)), curses.A_NORMAL
+                    )
+                    real_x += len(str(dp)) + 4
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_RTEE, curses.A_NORMAL
+                    )
+                    real_x += 1
 
             if self._tree_has_children:
                 if self._tree_expanded:
@@ -161,6 +125,43 @@ class TreeLine(textbox.Textfield):
         else:
             margin_needed = 0
         return margin_needed
+
+    def _indent_tree(self, dp, _tree_depth_next, real_x):
+        for i in range(dp - 1):
+            if (i < _tree_depth_next) and (not self._tree_last_line):
+                if self.show_v_lines:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_VLINE, curses.A_NORMAL
+                    )
+                    if self.height > 1:
+                        for h in range(self.height - 1):
+                            self.parent.curses_pad.addch(
+                                self.rely + h + 1,
+                                real_x,
+                                curses.ACS_VLINE,
+                                curses.A_NORMAL,
+                            )
+                else:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, " ", curses.A_NORMAL
+                    )
+
+            else:
+                if self.show_v_lines:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_BTEE, curses.A_NORMAL
+                    )
+
+                else:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, " ", curses.A_NORMAL
+                    )
+
+            real_x += 1
+            self.parent.curses_pad.addch(self.rely, real_x, ord(" "), curses.A_NORMAL)
+            real_x += 1
+
+        return real_x
 
     def display_value(self, vl):
         try:
