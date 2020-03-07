@@ -27,6 +27,9 @@ class TextfieldBase(widget.Widget):
         
         self.cursor_position = False
         
+        self._modified = False
+        self.decorate_modified = True
+
         self.highlight_color = highlight_color
         self.highlight_whole_widget = highlight_whole_widget
         self.invert_highlight_color = invert_highlight_color
@@ -43,6 +46,14 @@ class TextfieldBase(widget.Widget):
         self.set_text_widths()
         self.update()
         
+    @property
+    def modified(self):
+        return self._modified
+
+    @modified.setter
+    def modified(self, modified):
+        self._modified = modified
+
     def set_text_widths(self):
         if self.on_last_line:
             self.maximum_string_length = self.width - 2  # Leave room for the cursor
@@ -56,6 +67,14 @@ class TextfieldBase(widget.Widget):
     def calculate_area_needed(self):
         "Need one line of screen, and any width going"
         return 1,0
+
+    @property
+    def text_value(self):
+        return self.value
+
+    @text_value.setter
+    def text_value(self, value):
+        self.value = value
 
     def update(self, clear=True, cursor=True):
         """Update the contents of the textbox, without calling the final refresh to the screen"""
@@ -71,12 +90,12 @@ class TextfieldBase(widget.Widget):
         if self.hidden:
             return True
         
-        value_to_use_for_calculations = self.value        
+        value_to_use_for_calculations = self.text_value
         
         if self.ENSURE_STRING_VALUE:
             if value_to_use_for_calculations in (None, False, True):
                 value_to_use_for_calculations = ''
-                self.value = ''
+                self.text_value = ''
 
         if self.begin_at < 0: self.begin_at = 0
         
@@ -84,10 +103,10 @@ class TextfieldBase(widget.Widget):
             raise ValueError
         
         if self.editing:
-            if isinstance(self.value, bytes):
+            if isinstance(self.text_value, bytes):
                 # use a unicode version of self.value to work out where the cursor is.
                 # not always accurate, but better than the bytes
-                value_to_use_for_calculations = self.display_value(self.value).decode(self.encoding, 'replace')
+                value_to_use_for_calculations = self.display_value(self.text_value).decode(self.encoding, 'replace')
             if cursor:
                 if self.cursor_position is False:
                     self.cursor_position = len(value_to_use_for_calculations)
@@ -109,8 +128,6 @@ class TextfieldBase(widget.Widget):
                 else:
                     self.parent.curses_pad.bkgdset(' ',curses.A_STANDOUT)
 
-
-
         # Do this twice so that the _print method can ignore it if needed.
         if self.highlight:
             if self.do_colors():
@@ -125,7 +142,7 @@ class TextfieldBase(widget.Widget):
 
         if self.show_bold:
             self.parent.curses_pad.attron(curses.A_BOLD)
-        if self.important and not self.do_colors():
+        if (self.important or self.modified) and not self.do_colors():
             self.parent.curses_pad.attron(curses.A_UNDERLINE)
 
 
@@ -177,7 +194,7 @@ class TextfieldBase(widget.Widget):
         #self.parent.curses_pad.addch(self.rely, self.cursor_position - self.begin_at + self.relx, char_under_cur, curses.A_STANDOUT)
         #The following appears to work for unicode as well.
         try:
-            char_under_cur = self.display_value(self.value)[self.cursor_position]
+            char_under_cur = self.display_value(self.text_value)[self.cursor_position]
         except:
             char_under_cur = ' '
 
@@ -211,16 +228,16 @@ class TextfieldBase(widget.Widget):
             return ch.encode('utf-8', 'strict')
     
     def _get_string_to_print(self):
-        string_to_print = self.display_value(self.value)
+        string_to_print = self.display_value(self.text_value)
         if not string_to_print:
             return None
         string_to_print = string_to_print[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
         
         if sys.version_info[0] >= 3:
-            string_to_print = self.display_value(self.value)[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
+            string_to_print = self.display_value(self.text_value)[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
         else:
             # ensure unicode only here encoding here.
-            dv = self.display_value(self.value)
+            dv = self.display_value(self.text_value)
             if isinstance(dv, bytes):
                 dv = dv.decode(self.encoding, 'replace')
             string_to_print = dv[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
@@ -234,10 +251,10 @@ class TextfieldBase(widget.Widget):
         string_to_print = string_to_print[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
         
         if sys.version_info[0] >= 3:
-            string_to_print = self.display_value(self.value)[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
+            string_to_print = self.display_value(self.text_value)[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
         else:
             # ensure unicode only here encoding here.
-            dv = self.display_value(self.value)
+            dv = self.display_value(self.text_value)
             if isinstance(dv, bytes):
                 dv = dv.decode(self.encoding, 'replace')
             string_to_print = dv[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin]
@@ -270,10 +287,12 @@ class TextfieldBase(widget.Widget):
                     color = self.parent.theme_manager.findPair(self, self.color) | curses.A_BOLD
                 elif self.important:
                     color = self.parent.theme_manager.findPair(self, 'IMPORTANT') | curses.A_BOLD
+                elif self.modified:
+                    color = self.parent.theme_manager.findPair(self, 'MODIFIED') | curses.A_BOLD
                 else:
                     color = self.parent.theme_manager.findPair(self)
             else:
-                if self.important or self.show_bold:
+                if self.important or self.modified or self.show_bold:
                     color = curses.A_BOLD
                 else:
                     color = curses.A_NORMAL
@@ -308,7 +327,7 @@ class TextfieldBase(widget.Widget):
     def _print_pre_unicode(self):
         # This method was used to print the string before we became interested in unicode.
         
-        string_to_print = self.display_value(self.value)
+        string_to_print = self.display_value(self.text_value)
         if string_to_print == None: return
         
         if self.syntax_highlighting:
@@ -334,11 +353,15 @@ class TextfieldBase(widget.Widget):
                 coltofind = 'IMPORTANT'
                 self.parent.curses_pad.addstr(self.rely,self.relx+self.left_margin, string_to_print[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin], 
                                                     self.parent.theme_manager.findPair(self, coltofind) | curses.A_BOLD)
+            elif self.modified:
+                coltofind = 'MODIFIED'
+                self.parent.curses_pad.addstr(self.rely,self.relx+self.left_margin, string_to_print[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin], 
+                                                    self.parent.theme_manager.findPair(self, coltofind) | curses.A_BOLD)
             else:
                 self.parent.curses_pad.addstr(self.rely,self.relx+self.left_margin, string_to_print[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin], 
                                                 self.parent.theme_manager.findPair(self))
         else:
-            if self.important:
+            if self.important or self.modified:
                 self.parent.curses_pad.addstr(self.rely,self.relx+self.left_margin, 
                         string_to_print[self.begin_at:self.maximum_string_length+self.begin_at-self.left_margin], curses.A_BOLD)
             elif self.show_bold:
@@ -353,28 +376,29 @@ class TextfieldBase(widget.Widget):
         if clear or (self._highlightingdata == None):
             self._highlightingdata = []
         
-        string_to_print = self.display_value(self.value)
+        string_to_print = self.display_value(self.text_value)
 
 
 class Textfield(TextfieldBase):
     def show_brief_message(self, message):
         curses.beep()
-        keep_for_a_moment = self.value
-        self.value = message
+        keep_for_a_moment = self.text_value
+        self.text_value = message
         self.editing=False
         self.display()
         curses.napms(1200)
         self.editing=True
-        self.value = keep_for_a_moment
+        self.text_value = keep_for_a_moment
         
 
     def edit(self):
+        text_value = self.text_value
         self.editing = 1
         if self.cursor_position is False:
-            self.cursor_position = len(self.value or '')
+            self.cursor_position = len(text_value or '')
         self.parent.curses_pad.keypad(1)
         
-        self.old_value = self.value
+        self.old_value = text_value
         
         self.how_exited = False
 
@@ -382,10 +406,12 @@ class Textfield(TextfieldBase):
             self.display()
             self.get_and_use_key_press()
 
+        self.modified = self.modified or (self.old_value != self.text_value)
+
         self.begin_at = 0
         self.display()
         self.cursor_position = False
-        return self.how_exited, self.value
+        return self.how_exited, self.text_value
 
     ###########################################################################################
     # Handlers and methods
@@ -431,10 +457,11 @@ class Textfield(TextfieldBase):
             #self.cursor_position += len(curses.keyname(input))
             
             # workaround for the metamode bug:
-            if self._last_get_ch_was_unicode == True and isinstance(self.value, bytes):
+            text_value = self.text_value
+            if self._last_get_ch_was_unicode == True and isinstance(text_value, bytes):
                 # probably dealing with python2.
                 ch_adding = inp
-                self.value = self.value.decode()
+                self.text_value = text_value.decode()
             elif self._last_get_ch_was_unicode == True:
                 ch_adding = inp
             else:
@@ -442,8 +469,8 @@ class Textfield(TextfieldBase):
                     ch_adding = chr(inp)
                 except TypeError:
                     ch_adding = input
-            self.value = self.value[:self.cursor_position] + ch_adding \
-                + self.value[self.cursor_position:]
+            self.text_value = text_value[:self.cursor_position] + ch_adding \
+                + text_value[self.cursor_position:]
             self.cursor_position += len(ch_adding)
 
             # or avoid it entirely:
@@ -459,7 +486,8 @@ class Textfield(TextfieldBase):
 
     def h_delete_left(self, input):
         if self.editable and self.cursor_position > 0:
-            self.value = self.value[:self.cursor_position-1] + self.value[self.cursor_position:]
+            text_value = self.text_value
+            self.text_value = text_value[:self.cursor_position-1] + text_value[self.cursor_position:]
         
         self.cursor_position -= 1
         self.begin_at -= 1
@@ -467,17 +495,20 @@ class Textfield(TextfieldBase):
     
     def h_delete_right(self, input):
         if self.editable:
-            self.value = self.value[:self.cursor_position] + self.value[self.cursor_position+1:]
+            text_value = self.text_value
+            self.text_value = text_value[:self.cursor_position] + text_value[self.cursor_position+1:]
 
     def h_erase_left(self, input):
         if self.editable:
-            self.value = self.value[self.cursor_position:]
+            text_value = self.text_value
+            self.text_value = text_value[self.cursor_position:]
             self.cursor_position=0
     
     def h_erase_right(self, input):
         if self.editable:
-            self.value = self.value[:self.cursor_position]
-            self.cursor_position = len(self.value)
+            text_value = self.text_value
+            self.text_value = text_value[:self.cursor_position]
+            self.cursor_position = len(self.text_value)
             self.begin_at = 0
     
     def handle_mouse_event(self, mouse_event):
@@ -503,7 +534,7 @@ class FixedText(TextfieldBase):
             self.begin_at -= 1
 
     def h_cursor_right(self, input):
-        if len(self.value) - self.begin_at > self.maximum_string_length:
+        if len(self.text_value) - self.begin_at > self.maximum_string_length:
             self.begin_at += 1
 
     def update(self, clear=True,):
@@ -515,7 +546,7 @@ class FixedText(TextfieldBase):
         self.cursor_position = 0
         self.parent.curses_pad.keypad(1)
         
-        self.old_value = self.value
+        self.old_value = self.text_value
         
         self.how_exited = False
 
@@ -527,5 +558,5 @@ class FixedText(TextfieldBase):
         self.highlight = False
         self.display()
 
-        return self.how_exited, self.value
+        return self.how_exited, self.text_value
 
