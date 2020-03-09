@@ -3,25 +3,25 @@ import curses
 import weakref
 
 from . import wgmultilineeditable as MLEditable
-from . import wgmultiline    as multiline
-from . import wgtextbox      as textbox
+from . import wgmultiline as multiline
+from . import wgtextbox as textbox
 from npyscreen.compatibility_code import npysNPSTree as NPSTree
 from .npysTree import TreeData
 
 
-#class TreeLine(textbox.TextfieldBase):
+# class TreeLine(textbox.TextfieldBase):
 class TreeLine(textbox.Textfield):
     def __init__(self, *args, **keywords):
-        self._tree_real_value   = None
-        self._tree_ignore_root  = None
-        self._tree_depth        = False
+        self._tree_real_value = None
+        self._tree_ignore_root = None
+        self._tree_depth = False
         self._tree_sibling_next = False
         self._tree_has_children = False
-        self._tree_expanded     = True
-        self._tree_last_line    = False
-        self._tree_depth_next   = False
+        self._tree_expanded = True
+        self._tree_last_line = False
+        self._tree_depth_next = False
         self.safe_depth_display = False
-        self.show_v_lines       = True
+        self.show_v_lines = True
         super(TreeLine, self).__init__(*args, **keywords)
 
     ##########################################################################
@@ -34,23 +34,22 @@ class TreeLine(textbox.Textfield):
         except AttributeError:
             return vl.getContentForDisplay()
 
-
     # End Compatibility Methods
     ##########################################################################
 
-
-
-    #EXPERIMENTAL
+    # EXPERIMENTAL
     def _print(self, left_margin=0):
         self.left_margin = left_margin
-        self.parent.curses_pad.bkgdset(' ',curses.A_NORMAL)
+        self.parent.curses_pad.bkgdset(" ", curses.A_NORMAL)
         self.left_margin += self._print_tree(self.relx)
         if self.highlight:
-            self.parent.curses_pad.bkgdset(' ',curses.A_STANDOUT)
+            self.parent.curses_pad.bkgdset(" ", curses.A_STANDOUT)
         super(TreeLine, self)._print()
-        
+
     def _print_tree(self, real_x):
-        if hasattr(self._tree_real_value, 'find_depth') or hasattr(self._tree_real_value, 'findDepth'):
+        if hasattr(self._tree_real_value, "find_depth") or hasattr(
+            self._tree_real_value, "findDepth"
+        ):
             control_chars_added = 0
             this_safe_depth_display = self.safe_depth_display or ((self.width // 2) + 1)
             if self._tree_depth_next:
@@ -60,78 +59,122 @@ class TreeLine(textbox.Textfield):
             dp = self._tree_depth
             if self._tree_ignore_root:
                 dp -= 1
-            if dp: # > 0:
-                if dp < this_safe_depth_display:                    
-                    for i in range(dp-1):
-                        if (i < _tree_depth_next) and (not self._tree_last_line): # was i+1 < # and not (_tree_depth_next==1):
-                            if self.show_v_lines:
-                                self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_VLINE, curses.A_NORMAL)
-                                if self.height > 1:
-                                    for h in range(self.height-1):
-                                        self.parent.curses_pad.addch(self.rely+h+1, real_x, curses.ACS_VLINE, curses.A_NORMAL)
-                            else:
-                                self.parent.curses_pad.addch(self.rely, real_x, ' ', curses.A_NORMAL)
-                                
-                        else:
-                            if self.show_v_lines:
-                                self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_BTEE, curses.A_NORMAL)
-                                
-                            else:
-                                self.parent.curses_pad.addch(self.rely, real_x, ' ', curses.A_NORMAL)
-                                
-                        real_x +=1
-                        self.parent.curses_pad.addch(self.rely, real_x, ord(' '), curses.A_NORMAL)
-                        real_x +=1
-                    
-                    
-                    
+            if dp:  # > 0:
+                if dp < this_safe_depth_display:
+                    real_x = self._indent_tree(dp, _tree_depth_next, real_x)
+
                     if self._tree_sibling_next or _tree_depth_next > self._tree_depth:
-                        self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_LTEE, curses.A_NORMAL)
+                        self.parent.curses_pad.addch(
+                            self.rely, real_x, curses.ACS_LTEE, curses.A_NORMAL
+                        )
                         if self.height > 1:
-                            for h in range(self.height-1):
-                                self.parent.curses_pad.addch(self.rely+h+1, real_x, curses.ACS_VLINE, curses.A_NORMAL)
-                    
+                            for h in range(self.height - 1):
+                                self.parent.curses_pad.addch(
+                                    self.rely + h + 1,
+                                    real_x,
+                                    curses.ACS_VLINE,
+                                    curses.A_NORMAL,
+                                )
+
                     else:
-                        self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_LLCORNER, curses.A_NORMAL)
+                        self.parent.curses_pad.addch(
+                            self.rely, real_x, curses.ACS_LLCORNER, curses.A_NORMAL
+                        )
                     real_x += 1
-                    self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL)
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL
+                    )
                     real_x += 1
                 else:
-                    self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL)
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_HLINE, curses.A_NORMAL
+                    )
                     real_x += 1
-                    self.parent.curses_pad.addstr(self.rely, real_x, "[ %s ]" % (str(dp)), curses.A_NORMAL)
+                    self.parent.curses_pad.addstr(
+                        self.rely, real_x, "[ %s ]" % (str(dp)), curses.A_NORMAL
+                    )
                     real_x += len(str(dp)) + 4
-                    self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_RTEE, curses.A_NORMAL)
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_RTEE, curses.A_NORMAL
+                    )
                     real_x += 1
-                    
+
             if self._tree_has_children:
                 if self._tree_expanded:
-                    self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_TTEE, curses.A_NORMAL)
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_TTEE, curses.A_NORMAL
+                    )
                     if self.height > 1:
-                        for h in range(self.height-1):
-                            self.parent.curses_pad.addch(self.rely+h+1, real_x, curses.ACS_VLINE, curses.A_NORMAL)
-                    
-                else:   
-                    self.parent.curses_pad.addch(self.rely, real_x, curses.ACS_RARROW, curses.A_NORMAL)
-                real_x +=1
+                        for h in range(self.height - 1):
+                            self.parent.curses_pad.addch(
+                                self.rely + h + 1,
+                                real_x,
+                                curses.ACS_VLINE,
+                                curses.A_NORMAL,
+                            )
+
+                else:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_RARROW, curses.A_NORMAL
+                    )
+                real_x += 1
             else:
-                real_x +=1
+                real_x += 1
             control_chars_added += real_x - self.relx
             margin_needed = control_chars_added + 1
         else:
             margin_needed = 0
         return margin_needed
-        
-        
+
+    def _indent_tree(self, dp, _tree_depth_next, real_x):
+        for i in range(dp - 1):
+            if (i < _tree_depth_next) and (not self._tree_last_line):
+                if self.show_v_lines:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_VLINE, curses.A_NORMAL
+                    )
+                    if self.height > 1:
+                        for h in range(self.height - 1):
+                            self.parent.curses_pad.addch(
+                                self.rely + h + 1,
+                                real_x,
+                                curses.ACS_VLINE,
+                                curses.A_NORMAL,
+                            )
+                else:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, " ", curses.A_NORMAL
+                    )
+
+            else:
+                if self.show_v_lines:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, curses.ACS_BTEE, curses.A_NORMAL
+                    )
+
+                else:
+                    self.parent.curses_pad.addch(
+                        self.rely, real_x, " ", curses.A_NORMAL
+                    )
+
+            real_x += 1
+            self.parent.curses_pad.addch(self.rely, real_x, ord(" "), curses.A_NORMAL)
+            real_x += 1
+
+        return real_x
+
     def display_value(self, vl):
         try:
-            return self.safe_string(self._get_content_for_display(self._tree_real_value))
-        except:
+            return self.safe_string(
+                self._get_content_for_display(self._tree_real_value)
+            )
+        except Exception:
+            # should catch UnicodeError or ValueError specifically?
             # Catch the times this is None.
             return self.safe_string(vl)
-            
-    def set_color(self, color='DEFAULT'):
-        self.color=color
+
+    def set_color(self, color="DEFAULT"):
+        self.color = color
 
     @property
     def text_value(self):
@@ -142,10 +185,11 @@ class TreeLine(textbox.Textfield):
         self._tree_real_value.set_content(value)
         self.value = value
 
+
 class TreeLineAnnotated(TreeLine):
     def __init__(self, *args, **kwargs):
-        self._annotation = '?'
-        self._annotation_color = 'LABEL'
+        self._annotation = "?"
+        self._annotation_color = "LABEL"
         self._annotation_padding = 0
         self.show_v_lines = False
         super().__init__(*args, **kwargs)
@@ -156,14 +200,15 @@ class TreeLineAnnotated(TreeLine):
 
     @annotation.setter
     def annotation(self, annotation):
-        if annotation: self._annotation = annotation
+        if annotation:
+            self._annotation = annotation
 
     @property
     def annotation_color(self):
         return self._annotation_color
 
     @annotation_color.setter
-    def annotation_color(self, color='DEFAULT'):
+    def annotation_color(self, color="DEFAULT"):
         self._annotation_color = color
 
     @property
@@ -177,34 +222,38 @@ class TreeLineAnnotated(TreeLine):
     def annotationColor(self, real_x):
         # Must return the "Margin" needed before the entry begins
         # historical reasons.
-        self.parent.curses_pad.addstr(self.rely, real_x, self.annotation, \
-            self.parent.theme_manager.findPair(self, self.annotation_color))
-        return max(self.annotation_padding,len(self.annotation))
+        self.parent.curses_pad.addstr(
+            self.rely,
+            real_x,
+            self.annotation,
+            self.parent.theme_manager.findPair(self, self.annotation_color),
+        )
+        return max(self.annotation_padding, len(self.annotation))
 
     def annotationNoColor(self, real_x):
         # Must return the "Margin" needed before the entry begins
-        #self.parent.curses_pad.addstr(self.rely, real_x, 'xxx')
-        #return 3
+        # self.parent.curses_pad.addstr(self.rely, real_x, 'xxx')
+        # return 3
         self.parent.curses_pad.addstr(self.rely, real_x, self.annotation)
         return len(self.annotation)
 
     def _print(self):
         self.left_margin = 0
-        self.parent.curses_pad.bkgdset(' ',curses.A_NORMAL)
+        self.parent.curses_pad.bkgdset(" ", curses.A_NORMAL)
         self.left_margin += self._print_tree(self.relx)
-        if self.do_colors():    
-            self.left_margin += self.annotationColor(self.left_margin+self.relx)
+        if self.do_colors():
+            self.left_margin += self.annotationColor(self.left_margin + self.relx)
         else:
-            self.left_margin += self.annotationNoColor(self.left_margin+self.relx)
+            self.left_margin += self.annotationNoColor(self.left_margin + self.relx)
         if self.highlight:
-            self.parent.curses_pad.bkgdset(' ',curses.A_STANDOUT)
+            self.parent.curses_pad.bkgdset(" ", curses.A_STANDOUT)
         super(TreeLine, self)._print()
 
 
 class MLTree(multiline.MultiLine):
     # Experimental
-    
-    #_contained_widgets = TreeLineAnnotated
+
+    # _contained_widgets = TreeLineAnnotated
     _contained_widgets = TreeLine
 
     ##########################################################################
@@ -241,129 +290,155 @@ class MLTree(multiline.MultiLine):
         except AttributeError:
             return vl.getTreeAsList()
 
-    def _walk_tree(self, root, only_expanded=True, ignore_root=True, sort=None, sort_function=None):
+    def _walk_tree(
+        self, root, only_expanded=True, ignore_root=True, sort=None, sort_function=None
+    ):
         try:
-            return root.walk_tree(only_expanded=only_expanded, ignore_root=ignore_root, sort=sort, sort_function=sort_function)
+            return root.walk_tree(
+                only_expanded=only_expanded,
+                ignore_root=ignore_root,
+                sort=sort,
+                sort_function=sort_function,
+            )
         except AttributeError:
-            return root.walkTree(onlyExpanded=only_expanded, ignoreRoot=ignore_root, sort=sort, sort_function=sort_function)
+            return root.walkTree(
+                onlyExpanded=only_expanded,
+                ignoreRoot=ignore_root,
+                sort=sort,
+                sort_function=sort_function,
+            )
 
     # End Compatibility Methods
     ##########################################################################
 
     def _setMyValues(self, tree):
-        if tree == [] or tree == None:
-            self._myFullValues = TreeData() #NPSTree.NPSTreeData()
+        if tree == [] or tree is None:
+            self._myFullValues = TreeData()  # NPSTree.NPSTreeData()
         elif not (isinstance(tree, TreeData) or isinstance(tree, NPSTree.NPSTreeData)):
             tree = self.convertToTree(tree)
             self._myFullValues = tree
-            if not (isinstance(tree, TreeData) or isinstance(tree, NPSTree.NPSTreeData)):
-                raise TypeError("MultiLineTree widget can only contain a TreeData or NPSTreeData object in its values attribute")
+            if not (
+                isinstance(tree, TreeData) or isinstance(tree, NPSTree.NPSTreeData)
+            ):
+                raise TypeError(
+                    "MultiLineTree widget can only contain a TreeData or "
+                    "NPSTreeData object in its values attribute"
+                )
         else:
             self._myFullValues = tree
-    
+
     def convertToTree(self, tree):
         "Override this function to convert a set of values to a tree."
         return None
-        
+
     def resize(self):
         super(MLTree, self).resize()
         self.clearDisplayCache()
         self.update(clear=True)
         self.display()
-    
+
     def clearDisplayCache(self):
         self._cached_tree = None
         self._cached_sort = None
         self._cached_tree_as_list = None
-    
+
     def _getApparentValues(self):
         try:
-            if self._cached_tree is weakref.proxy(self._myFullValues) and \
-            (self._cached_sort == (self._myFullValues.sort, self._myFullValues.sort_function)):
+            if self._cached_tree is weakref.proxy(self._myFullValues) and (
+                self._cached_sort
+                == (self._myFullValues.sort, self._myFullValues.sort_function)
+            ):
                 return self._cached_tree_as_list
-        except:
+        except Exception:
             pass
         self._cached_tree = weakref.proxy(self._myFullValues)
         self._cached_sort = (self._myFullValues.sort, self._myFullValues.sort_function)
         self._cached_tree_as_list = self._get_tree_as_list(self._myFullValues)
         return self._cached_tree_as_list
-    
+
     def _walkMyValues(self):
         return self._walk_tree(self._myFullValues)
-    
+
     def _delMyValues(self):
         self._myFullValues = None
-    
+
     values = property(_getApparentValues, _setMyValues, _delMyValues)
-    
+
     def filter_value(self, index):
         if self._filter in self._get_content(self.display_value(self.values[index])):
             return True
         else:
             return False
-    
+
     def display_value(self, vl):
         return vl
-    
+
     def set_up_handlers(self):
         super(MLTree, self).set_up_handlers()
-        self.handlers.update({
-                ord('<'): self.h_collapse_tree,
-                ord('>'): self.h_expand_tree,
-                ord('['): self.h_collapse_tree,
-                ord(']'): self.h_expand_tree,
-                ord('{'): self.h_collapse_all,
-                ord('}'): self.h_expand_all,
-                ord('+'): self.h_expand_tree,
-                ord('-'): self.h_collapse_tree,
-                curses.ascii.SP: self.h_toggle_tree
-        })
+        self.handlers.update(
+            {
+                ord("<"): self.h_collapse_tree,
+                ord(">"): self.h_expand_tree,
+                ord("["): self.h_collapse_tree,
+                ord("]"): self.h_expand_tree,
+                ord("{"): self.h_collapse_all,
+                ord("}"): self.h_expand_all,
+                ord("+"): self.h_expand_tree,
+                ord("-"): self.h_collapse_tree,
+                curses.ascii.SP: self.h_toggle_tree,
+            }
+        )
 
     def _before_print_lines(self):
         pass
-    
+
     def _set_line_values(self, line, value_indexer):
-        line._tree_real_value   = None
-        line._tree_depth        = False
+        line._tree_real_value = None
+        line._tree_depth = False
         line._tree_sibling_next = False
         line._tree_has_children = False
-        line._tree_expanded     = False
-        line._tree_last_line    = False
-        line._tree_depth_next   = False
-        line._tree_ignore_root  = None
+        line._tree_expanded = False
+        line._tree_last_line = False
+        line._tree_depth_next = False
+        line._tree_ignore_root = None
         try:
             line.value = self.display_value(self.values[value_indexer])
             line._tree_real_value = self.values[value_indexer]
             line._tree_ignore_root = self._get_ignore_root(self._myFullValues)
             try:
-                line._tree_depth        = self._find_depth(self.values[value_indexer])
+                line._tree_depth = self._find_depth(self.values[value_indexer])
                 line._tree_has_children = self._has_children(self.values[value_indexer])
-                line._tree_expanded     = self.values[value_indexer].expanded
-            except:
-                line._tree_depth        = False
+                line._tree_expanded = self.values[value_indexer].expanded
+            except Exception:
+                # should be catching IndexError specifically?
+                line._tree_depth = False
                 line._tree_has_children = False
-                line._tree_expanded     = False
+                line._tree_expanded = False
             try:
-                if line._tree_depth == self._find_depth(self.values[value_indexer+1]):
+                if line._tree_depth == self._find_depth(self.values[value_indexer + 1]):
                     line._tree_sibling_next = True
                 else:
                     line._tree_sibling_next = False
-    
-            except:
+
+            except Exception:
+                # should be catching IndexError specifically?
                 line._sibling_next = False
                 line._tree_last_line = True
             try:
-                line._tree_depth_next = self._find_depth(self.values[value_indexer+1])
-            except:
+                line._tree_depth_next = self._find_depth(self.values[value_indexer + 1])
+            except Exception:
+                # should be catching IndexError specifically?
                 line._tree_depth_next = False
             line.hidden = False
         except IndexError:
             self._set_line_blank(line)
         except TypeError:
             self._set_line_blank(line)
-            
+
     def h_collapse_tree(self, ch):
-        if self.values[self.cursor_line].expanded and self._has_children(self.values[self.cursor_line]):
+        if self.values[self.cursor_line].expanded and self._has_children(
+            self.values[self.cursor_line]
+        ):
             self.values[self.cursor_line].expanded = False
         else:
             look_for_depth = self._find_depth(self.values[self.cursor_line]) - 1
@@ -382,30 +457,33 @@ class MLTree(multiline.MultiLine):
         if not self.values[self.cursor_line].expanded:
             self.values[self.cursor_line].expanded = True
         else:
-            for v in self._walk_tree(self.values[self.cursor_line], only_expanded=False):
+            for v in self._walk_tree(
+                self.values[self.cursor_line], only_expanded=False
+            ):
                 v.expanded = True
         self._cached_tree = None
         self.display()
-    
+
     def h_collapse_all(self, ch):
         for v in self._walk_tree(self._myFullValues, only_expanded=True):
             v.expanded = False
         self._cached_tree = None
         self.cursor_line = 0
         self.display()
-    
+
     def h_expand_all(self, ch):
         for v in self._walk_tree(self._myFullValues, only_expanded=False):
-            v.expanded    = True
+            v.expanded = True
         self._cached_tree = None
-        self.cursor_line  = 0
+        self.cursor_line = 0
         self.display()
-    
+
     def h_toggle_tree(self, ch):
         if self.values[self.cursor_line].expanded:
             self.h_collapse_tree(ch)
         else:
             self.h_expand_tree(ch)
+
 
 class MLTreeAnnotated(MLTree):
     _contained_widgets = TreeLineAnnotated
@@ -416,21 +494,25 @@ class MLTreeAnnotated(MLTree):
 
     @annotation_padding.setter
     def annotation_padding(self, padding):
-        if isinstance(padding, int) and padding >= 0: self._annotation_padding = padding
+        if isinstance(padding, int) and padding >= 0:
+            self._annotation_padding = padding
 
     def _set_line_values(self, line, value_indexer):
         try:
             tree_data = self.values[value_indexer]
             line.annotation = tree_data.annotation
             line.annotation_padding = self.annotation_padding
-            line.annotation_color = 'LABEL'
-        except:
+            line.annotation_color = "LABEL"
+        except Exception:
+            # should be catching IndexError specifically?
             pass
 
         super()._set_line_values(line, value_indexer)
 
+
 class MLTreeAction(MLTree, multiline.MultiLineAction):
     pass
+
 
 class MLTreeAnnotatedAction(MLTree, multiline.MultiLineAction):
     _contained_widgets = TreeLineAnnotated
@@ -450,8 +532,9 @@ class MLTreeEditable(MLTree, MLEditable.MultiLineEditable):
             tree_data = self.values[value_indexer]
             line.set_editable(tree_data.editable)
             line.modified = tree_data.modified
-            line.set_color('DEFAULT' if tree_data.editable else 'NO_EDIT')
-        except:
+            line.set_color("DEFAULT" if tree_data.editable else "NO_EDIT")
+        except Exception:
+            # should be catching IndexError specifically?
             pass
 
         super()._set_line_values(line, value_indexer)
@@ -460,11 +543,12 @@ class MLTreeEditable(MLTree, MLEditable.MultiLineEditable):
         check_status = True
 
         try:
-            active_line = self._my_widgets[(self.cursor_line-self.start_display_at)]
+            active_line = self._my_widgets[(self.cursor_line - self.start_display_at)]
         except IndexError:
             return False
 
-        if not active_line.get_editable(): return False
+        if not active_line.get_editable():
+            return False
 
         original_text_value = active_line.text_value
         active_line.highlight = False
@@ -474,7 +558,7 @@ class MLTreeEditable(MLTree, MLEditable.MultiLineEditable):
         active_line._tree_real_value.modified = active_line.modified
 
         self.reset_display_cache()
-        
+
         if self.CHECK_VALUE:
             if not self.check_line(active_line):
                 # reset value for now.  may want to add other options, e.g. delete node
@@ -484,7 +568,7 @@ class MLTreeEditable(MLTree, MLEditable.MultiLineEditable):
 
         # add modification status to tree data, and add indicator to form title
         active_line._tree_real_value.modified = active_line.modified
-        if active_line.modified and not self.parent.name.endswith("*"): 
+        if active_line.modified and not self.parent.name.endswith("*"):
             self.parent.name += " *"
             self.parent.draw_title_and_help()
 
@@ -492,22 +576,26 @@ class MLTreeEditable(MLTree, MLEditable.MultiLineEditable):
 
     def set_up_handlers(self):
         super().set_up_handlers()
-        self.handlers.update ( {
-            ord('e'):        self.h_edit_cursor_line_value,
-            ord('r'):        self.h_edit_cursor_line_value,
-            curses.ascii.CR: self.h_edit_cursor_line_value,
-            curses.ascii.NL: self.h_edit_cursor_line_value,
+        self.handlers.update(
+            {
+                ord("e"): self.h_edit_cursor_line_value,
+                ord("r"): self.h_edit_cursor_line_value,
+                curses.ascii.CR: self.h_edit_cursor_line_value,
+                curses.ascii.NL: self.h_edit_cursor_line_value,
+                # unregister unwanted bindings from super class(es)
+                # TODO: skip these registrations altogether with proper super() use
+                ord("i"): noop(),
+                ord("o"): noop(),
+                curses.ascii.DEL: noop(),
+                curses.ascii.BS: noop(),
+                curses.KEY_BACKSPACE: noop(),
+            }
+        )
 
-            # unregister unwanted bindings from super class(es)
-            # TODO: skip these registrations altogether with proper super() use
-            ord('i'):             self.noop,
-            ord('o'):             self.noop,
-            curses.ascii.DEL:     self.noop,
-            curses.ascii.BS:      self.noop,
-            curses.KEY_BACKSPACE: self.noop
-        })
-
-    noop = lambda *a, **k: None
 
 class MLTreeAnnotatedEditable(MLTreeEditable, MLTreeAnnotated):
     pass
+
+
+def noop(*a, **k):
+    None

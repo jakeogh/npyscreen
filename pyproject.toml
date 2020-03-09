@@ -9,7 +9,7 @@ authors = [
 license = "BSD-3-Clause"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = ">=3.6"
 
 [tool.poetry.dev-dependencies]
 black = "^19.10b0"
@@ -17,7 +17,8 @@ flake8 = "^3.7.9"
 pyls-black = "^0.4.4"
 rope = "^0.16.0"
 pydocstyle = "^5.0.2"
-python-language-server = "^0.31.7"
+python-language-server = { git = "https://github.com/rdugan/python-language-server.git", branch = "develop" }
+# python-language-server = "^0.31.7"
 
 [build-system]
 requires = ["poetry>=1.0.3"]
