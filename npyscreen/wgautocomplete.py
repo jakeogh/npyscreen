@@ -133,13 +133,17 @@ class Filename(Autocomplete):
             name=self.name, framed=True, lines=lines, columns=columns
         )
         text_width = columns - 7
-        for i in range(len(values)):
-            value = values[i]
+        truncated_values = []
+        for value in values:
             if len(value) > text_width:
-                values[i] = str("\u2026" + value[-text_width:])
+                value = str("\u2026" + value[-text_width:])
+            truncated_values.append(value)
 
         sel = tmp_window.add_widget(
-            multiline.MultiLine, values=values, return_exit=True, select_exit=True,
+            multiline.MultiLine,
+            values=truncated_values,
+            return_exit=True,
+            select_exit=True,
         )
 
         tmp_window.display()
